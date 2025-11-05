@@ -1,22 +1,23 @@
 import { useState } from "react";
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
+import { Plus } from "lucide-react";
 
 interface AddAchievementDialogProps {
-  open: boolean;
-  onOpenChange: (open: boolean) => void;
-  onSuccess: () => void;
+  onAchievementAdded?: () => void;
 }
 
-export function AddAchievementDialog({ open, onOpenChange, onSuccess }: AddAchievementDialogProps) {
-  const { toast } = useToast();
+export function AddAchievementDialog({ onAchievementAdded }: AddAchievementDialogProps) {
+  const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
+  const { toast } = useToast();
+
   const [formData, setFormData] = useState({
     studentName: "",
     studentId: "",
@@ -25,19 +26,8 @@ export function AddAchievementDialog({ open, onOpenChange, onSuccess }: AddAchie
     level: "",
     achievementDate: "",
     description: "",
-    addedBy: ""
+    addedBy: "Admin"
   });
-
-  const categories = [
-    "Academic Competition",
-    "Sports",
-    "Community Service",
-    "Leadership",
-    "Arts & Performance",
-    "STEM & Technology"
-  ];
-
-  const levels = ["School", "District", "State", "National", "International"];
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -59,7 +49,7 @@ export function AddAchievementDialog({ open, onOpenChange, onSuccess }: AddAchie
 
       toast({
         title: "Success",
-        description: "Achievement added successfully"
+        description: "Achievement added successfully",
       });
 
       setFormData({
@@ -70,17 +60,16 @@ export function AddAchievementDialog({ open, onOpenChange, onSuccess }: AddAchie
         level: "",
         achievementDate: "",
         description: "",
-        addedBy: ""
+        addedBy: "Admin"
       });
-      
-      onSuccess();
-      onOpenChange(false);
-    } catch (error) {
-      console.error("Error adding achievement:", error);
+
+      setOpen(false);
+      onAchievementAdded?.();
+    } catch (error: any) {
       toast({
         title: "Error",
-        description: "Failed to add achievement",
-        variant: "destructive"
+        description: error.message,
+        variant: "destructive",
       });
     } finally {
       setLoading(false);
@@ -88,15 +77,20 @@ export function AddAchievementDialog({ open, onOpenChange, onSuccess }: AddAchie
   };
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
+    <Dialog open={open} onOpenChange={setOpen}>
+      <DialogTrigger asChild>
+        <Button className="flex items-center space-x-2">
+          <Plus className="w-4 h-4" />
+          <span>Add Achievement</span>
+        </Button>
+      </DialogTrigger>
       <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>Add New Achievement</DialogTitle>
           <DialogDescription>
-            Record a new student achievement in the system
+            Record a new student achievement to the system
           </DialogDescription>
         </DialogHeader>
-        
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
@@ -109,7 +103,6 @@ export function AddAchievementDialog({ open, onOpenChange, onSuccess }: AddAchie
                 placeholder="e.g., Sarah Johnson"
               />
             </div>
-            
             <div className="space-y-2">
               <Label htmlFor="studentId">Student ID *</Label>
               <Input
@@ -141,17 +134,20 @@ export function AddAchievementDialog({ open, onOpenChange, onSuccess }: AddAchie
                 value={formData.category}
                 onValueChange={(value) => setFormData({ ...formData, category: value })}
               >
-                <SelectTrigger id="category">
+                <SelectTrigger>
                   <SelectValue placeholder="Select category" />
                 </SelectTrigger>
                 <SelectContent>
-                  {categories.map((cat) => (
-                    <SelectItem key={cat} value={cat}>{cat}</SelectItem>
-                  ))}
+                  <SelectItem value="Sports">Sports & Athletics</SelectItem>
+                  <SelectItem value="Academic">Academic Excellence</SelectItem>
+                  <SelectItem value="Arts">Arts & Performance</SelectItem>
+                  <SelectItem value="Community Service">Community Service</SelectItem>
+                  <SelectItem value="Leadership">Leadership & Clubs</SelectItem>
+                  <SelectItem value="STEM">STEM & Technology</SelectItem>
                 </SelectContent>
               </Select>
             </div>
-            
+
             <div className="space-y-2">
               <Label htmlFor="level">Level *</Label>
               <Select
@@ -159,40 +155,29 @@ export function AddAchievementDialog({ open, onOpenChange, onSuccess }: AddAchie
                 value={formData.level}
                 onValueChange={(value) => setFormData({ ...formData, level: value })}
               >
-                <SelectTrigger id="level">
+                <SelectTrigger>
                   <SelectValue placeholder="Select level" />
                 </SelectTrigger>
                 <SelectContent>
-                  {levels.map((lvl) => (
-                    <SelectItem key={lvl} value={lvl}>{lvl}</SelectItem>
-                  ))}
+                  <SelectItem value="School">School</SelectItem>
+                  <SelectItem value="District">District</SelectItem>
+                  <SelectItem value="State">State</SelectItem>
+                  <SelectItem value="National">National</SelectItem>
+                  <SelectItem value="International">International</SelectItem>
                 </SelectContent>
               </Select>
             </div>
           </div>
 
-          <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label htmlFor="achievementDate">Achievement Date *</Label>
-              <Input
-                id="achievementDate"
-                type="date"
-                required
-                value={formData.achievementDate}
-                onChange={(e) => setFormData({ ...formData, achievementDate: e.target.value })}
-              />
-            </div>
-            
-            <div className="space-y-2">
-              <Label htmlFor="addedBy">Added By *</Label>
-              <Input
-                id="addedBy"
-                required
-                value={formData.addedBy}
-                onChange={(e) => setFormData({ ...formData, addedBy: e.target.value })}
-                placeholder="e.g., Prof. Smith"
-              />
-            </div>
+          <div className="space-y-2">
+            <Label htmlFor="achievementDate">Achievement Date *</Label>
+            <Input
+              id="achievementDate"
+              type="date"
+              required
+              value={formData.achievementDate}
+              onChange={(e) => setFormData({ ...formData, achievementDate: e.target.value })}
+            />
           </div>
 
           <div className="space-y-2">
@@ -201,13 +186,13 @@ export function AddAchievementDialog({ open, onOpenChange, onSuccess }: AddAchie
               id="description"
               value={formData.description}
               onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-              placeholder="Optional description or additional details"
+              placeholder="Additional details about the achievement..."
               rows={3}
             />
           </div>
 
           <DialogFooter>
-            <Button type="button" variant="outline" onClick={() => onOpenChange(false)} disabled={loading}>
+            <Button type="button" variant="outline" onClick={() => setOpen(false)}>
               Cancel
             </Button>
             <Button type="submit" disabled={loading}>

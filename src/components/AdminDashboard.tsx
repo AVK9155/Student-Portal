@@ -9,42 +9,22 @@ import {
   Users, 
   Trophy, 
   TrendingUp, 
-  Calendar, 
-  Plus, 
   Search, 
   Filter,
   Download,
   BarChart3,
   Award,
-  Star,
-  Trash2
+  Star
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { AddAchievementDialog } from "./AddAchievementDialog";
 
-interface Achievement {
-  id: string;
-  student_name: string;
-  student_id: string;
-  achievement_title: string;
-  category: string;
-  level: string;
-  achievement_date: string;
-  description: string | null;
-  added_by: string;
-}
-
 export function AdminDashboard() {
-  const { toast } = useToast();
   const [searchTerm, setSearchTerm] = useState("");
-  const [achievements, setAchievements] = useState<Achievement[]>([]);
+  const [achievements, setAchievements] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
-  const [addDialogOpen, setAddDialogOpen] = useState(false);
-
-  useEffect(() => {
-    fetchAchievements();
-  }, []);
+  const { toast } = useToast();
 
   const fetchAchievements = async () => {
     try {
@@ -55,143 +35,109 @@ export function AdminDashboard() {
 
       if (error) throw error;
       setAchievements(data || []);
-    } catch (error) {
-      console.error("Error fetching achievements:", error);
+    } catch (error: any) {
       toast({
         title: "Error",
         description: "Failed to load achievements",
-        variant: "destructive"
+        variant: "destructive",
       });
     } finally {
       setLoading(false);
     }
   };
 
-  const handleDeleteAchievement = async (id: string) => {
-    try {
-      const { error } = await supabase
-        .from("achievements")
-        .delete()
-        .eq("id", id);
+  useEffect(() => {
+    fetchAchievements();
+  }, []);
 
-      if (error) throw error;
-
-      toast({
-        title: "Success",
-        description: "Achievement deleted successfully"
-      });
-      fetchAchievements();
-    } catch (error) {
-      console.error("Error deleting achievement:", error);
-      toast({
-        title: "Error",
-        description: "Failed to delete achievement",
-        variant: "destructive"
-      });
-    }
+  const overviewStats = {
+    totalStudents: new Set(achievements.map(a => a.student_id)).size,
+    totalAchievements: achievements.length,
+    thisMonthAchievements: achievements.filter(a => {
+      const date = new Date(a.achievement_date);
+      const now = new Date();
+      return date.getMonth() === now.getMonth() && date.getFullYear() === now.getFullYear();
+    }).length,
+    averagePerStudent: (achievements.length / Math.max(new Set(achievements.map(a => a.student_id)).size, 1)).toFixed(1)
   };
 
-  const handleExportReport = () => {
+  const filteredAchievements = achievements.filter(achievement =>
+    achievement.student_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    achievement.achievement_title.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    achievement.category.toLowerCase().includes(searchTerm.toLowerCase())
+  );
+
+  const exportToCSV = () => {
+    const headers = ["Student Name", "Student ID", "Achievement", "Category", "Level", "Date", "Added By"];
+    const rows = achievements.map(a => [
+      a.student_name,
+      a.student_id,
+      a.achievement_title,
+      a.category,
+      a.level,
+      new Date(a.achievement_date).toLocaleDateString(),
+      a.added_by
+    ]);
+
     const csvContent = [
-      ["Student Name", "Student ID", "Achievement", "Category", "Level", "Date", "Added By"],
-      ...achievements.map(a => [
-        a.student_name,
-        a.student_id,
-        a.achievement_title,
-        a.category,
-        a.level,
-        new Date(a.achievement_date).toLocaleDateString(),
-        a.added_by
-      ])
-    ].map(row => row.join(",")).join("\n");
+      headers.join(","),
+      ...rows.map(row => row.map(cell => `"${cell}"`).join(","))
+    ].join("\n");
 
     const blob = new Blob([csvContent], { type: "text/csv" });
-    const url = window.URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = `achievements-report-${new Date().toISOString().split("T")[0]}.csv`;
-    a.click();
-    window.URL.revokeObjectURL(url);
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = `achievements-report-${new Date().toISOString().split('T')[0]}.csv`;
+    link.click();
+    URL.revokeObjectURL(url);
 
     toast({
       title: "Success",
-      description: "Report exported successfully"
+      description: "Report exported successfully",
     });
   };
 
-  const uniqueStudents = new Set(achievements.map(a => a.student_id)).size;
-  const thisMonth = new Date();
-  thisMonth.setDate(1);
-  const thisMonthCount = achievements.filter(a => 
-    new Date(a.achievement_date) >= thisMonth
-  ).length;
-
-  const overviewStats = {
-    totalStudents: uniqueStudents,
-    totalAchievements: achievements.length,
-    thisMonthAchievements: thisMonthCount,
-    averagePerStudent: uniqueStudents > 0 ? (achievements.length / uniqueStudents).toFixed(1) : "0"
-  };
-
-  const filteredAchievements = achievements.filter(a =>
-    a.student_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    a.achievement_title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    a.student_id.toLowerCase().includes(searchTerm.toLowerCase())
-  );
-
-  const topPerformers = [
-    { name: "Sarah Johnson", id: "ST2024001", achievements: 15, points: 450 },
-    { name: "Mike Chen", id: "ST2024002", achievements: 12, points: 380 },
-    { name: "Emma Davis", id: "ST2024003", achievements: 11, points: 340 },
-    { name: "Alex Thompson", id: "ST2024004", achievements: 10, points: 320 },
-    { name: "Lisa Wang", id: "ST2024005", achievements: 9, points: 295 }
-  ];
+  const topPerformers = [...new Set(achievements.map(a => a.student_id))]
+    .map(studentId => {
+      const studentAchievements = achievements.filter(a => a.student_id === studentId);
+      return {
+        id: studentId,
+        name: studentAchievements[0]?.student_name || "",
+        achievements: studentAchievements.length,
+        points: studentAchievements.length * 30
+      };
+    })
+    .sort((a, b) => b.achievements - a.achievements)
+    .slice(0, 5);
 
   const getLevelColor = (level: string) => {
-    switch (level.toLowerCase()) {
-      case 'international': return 'bg-gold text-gold-foreground';
-      case 'national': return 'bg-warning text-warning-foreground';
-      case 'state': return 'bg-success text-success-foreground';
-      case 'district': return 'bg-accent text-accent-foreground';
-      case 'school': return 'bg-secondary text-secondary-foreground';
+    switch (level) {
+      case 'International': return 'bg-gold text-gold-foreground';
+      case 'National': return 'bg-primary text-primary-foreground';
+      case 'State': return 'bg-accent text-accent-foreground';
+      case 'District': return 'bg-success text-success-foreground';
+      case 'School': return 'bg-secondary text-secondary-foreground';
       default: return 'bg-muted text-muted-foreground';
     }
   };
 
   return (
-    <>
-      <AddAchievementDialog 
-        open={addDialogOpen} 
-        onOpenChange={setAddDialogOpen}
-        onSuccess={fetchAchievements}
-      />
-      
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {/* Header */}
-        <div className="flex justify-between items-center mb-8">
-          <div>
-            <h1 className="text-3xl font-bold text-foreground mb-2">Admin Dashboard</h1>
-            <p className="text-muted-foreground">Manage student achievements and track performance</p>
-          </div>
-          <div className="flex space-x-3">
-            <Button 
-              className="flex items-center space-x-2"
-              onClick={() => setAddDialogOpen(true)}
-            >
-              <Plus className="w-4 h-4" />
-              <span>Add Achievement</span>
-            </Button>
-            <Button 
-              variant="outline" 
-              className="flex items-center space-x-2"
-              onClick={handleExportReport}
-              disabled={achievements.length === 0}
-            >
-              <Download className="w-4 h-4" />
-              <span>Export Report</span>
-            </Button>
-          </div>
+    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      {/* Header */}
+      <div className="flex justify-between items-center mb-8">
+        <div>
+          <h1 className="text-3xl font-bold text-foreground mb-2">Admin Dashboard</h1>
+          <p className="text-muted-foreground">Manage student achievements and track performance</p>
         </div>
+        <div className="flex space-x-3">
+          <AddAchievementDialog onAchievementAdded={fetchAchievements} />
+          <Button variant="outline" className="flex items-center space-x-2" onClick={exportToCSV}>
+            <Download className="w-4 h-4" />
+            <span>Export Report</span>
+          </Button>
+        </div>
+      </div>
 
       {/* Overview Stats */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
@@ -204,7 +150,7 @@ export function AdminDashboard() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-primary">{overviewStats.totalStudents.toLocaleString()}</div>
-            <p className="text-xs text-success mt-1">+12% from last semester</p>
+            <p className="text-xs text-muted-foreground mt-1">Active students</p>
           </CardContent>
         </Card>
 
@@ -217,7 +163,7 @@ export function AdminDashboard() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-gold">{overviewStats.totalAchievements.toLocaleString()}</div>
-            <p className="text-xs text-success mt-1">+8% from last month</p>
+            <p className="text-xs text-muted-foreground mt-1">All time</p>
           </CardContent>
         </Card>
 
@@ -230,7 +176,7 @@ export function AdminDashboard() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-success">{overviewStats.thisMonthAchievements}</div>
-            <p className="text-xs text-success mt-1">+15% from last month</p>
+            <p className="text-xs text-muted-foreground mt-1">New achievements</p>
           </CardContent>
         </Card>
 
@@ -243,7 +189,7 @@ export function AdminDashboard() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-accent">{overviewStats.averagePerStudent}</div>
-            <p className="text-xs text-muted-foreground mt-1">Per student average</p>
+            <p className="text-xs text-muted-foreground mt-1">Achievement average</p>
           </CardContent>
         </Card>
       </div>
@@ -282,35 +228,33 @@ export function AdminDashboard() {
               </div>
             </CardHeader>
             <CardContent>
-              {loading ? (
-                <div className="text-center py-12 text-muted-foreground">Loading achievements...</div>
-              ) : filteredAchievements.length === 0 ? (
-                <div className="text-center py-12 text-muted-foreground">
-                  <Trophy className="w-12 h-12 mx-auto mb-4 opacity-50" />
-                  <p>No achievements found</p>
-                  <Button 
-                    variant="outline" 
-                    className="mt-4"
-                    onClick={() => setAddDialogOpen(true)}
-                  >
-                    Add First Achievement
-                  </Button>
-                </div>
-              ) : (
-                <Table>
-                  <TableHeader>
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Student</TableHead>
+                    <TableHead>Achievement</TableHead>
+                    <TableHead>Category</TableHead>
+                    <TableHead>Level</TableHead>
+                    <TableHead>Date</TableHead>
+                    <TableHead>Added By</TableHead>
+                    <TableHead>Actions</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {loading ? (
                     <TableRow>
-                      <TableHead>Student</TableHead>
-                      <TableHead>Achievement</TableHead>
-                      <TableHead>Category</TableHead>
-                      <TableHead>Level</TableHead>
-                      <TableHead>Date</TableHead>
-                      <TableHead>Added By</TableHead>
-                      <TableHead>Actions</TableHead>
+                      <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
+                        Loading achievements...
+                      </TableCell>
                     </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {filteredAchievements.map((achievement) => (
+                  ) : filteredAchievements.length === 0 ? (
+                    <TableRow>
+                      <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
+                        No achievements found. Add your first achievement to get started.
+                      </TableCell>
+                    </TableRow>
+                  ) : (
+                    filteredAchievements.map((achievement) => (
                       <TableRow key={achievement.id}>
                         <TableCell>
                           <div>
@@ -330,19 +274,13 @@ export function AdminDashboard() {
                         <TableCell>{new Date(achievement.achievement_date).toLocaleDateString()}</TableCell>
                         <TableCell className="text-muted-foreground">{achievement.added_by}</TableCell>
                         <TableCell>
-                          <Button 
-                            variant="ghost" 
-                            size="sm"
-                            onClick={() => handleDeleteAchievement(achievement.id)}
-                          >
-                            <Trash2 className="w-4 h-4" />
-                          </Button>
+                          <Button variant="ghost" size="sm">Edit</Button>
                         </TableCell>
                       </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              )}
+                    ))
+                  )}
+                </TableBody>
+              </Table>
             </CardContent>
           </Card>
         </TabsContent>
@@ -378,23 +316,27 @@ export function AdminDashboard() {
                 </CardHeader>
                 <CardContent>
                   <div className="space-y-4">
-                    {topPerformers.map((student, index) => (
-                      <div key={student.id} className="flex items-center justify-between">
-                        <div className="flex items-center space-x-3">
-                          <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center text-sm font-medium text-primary">
-                            {index + 1}
+                    {topPerformers.length === 0 ? (
+                      <p className="text-sm text-muted-foreground text-center py-4">No achievements yet</p>
+                    ) : (
+                      topPerformers.map((student, index) => (
+                        <div key={student.id} className="flex items-center justify-between">
+                          <div className="flex items-center space-x-3">
+                            <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center text-sm font-medium text-primary">
+                              {index + 1}
+                            </div>
+                            <div>
+                              <div className="font-medium text-sm">{student.name}</div>
+                              <div className="text-xs text-muted-foreground">{student.id}</div>
+                            </div>
                           </div>
-                          <div>
-                            <div className="font-medium text-sm">{student.name}</div>
-                            <div className="text-xs text-muted-foreground">{student.id}</div>
+                          <div className="text-right">
+                            <div className="text-sm font-medium">{student.achievements}</div>
+                            <div className="text-xs text-muted-foreground">{student.points}pts</div>
                           </div>
                         </div>
-                        <div className="text-right">
-                          <div className="text-sm font-medium">{student.achievements}</div>
-                          <div className="text-xs text-muted-foreground">{student.points}pts</div>
-                        </div>
-                      </div>
-                    ))}
+                      ))
+                    )}
                   </div>
                 </CardContent>
               </Card>
@@ -440,7 +382,6 @@ export function AdminDashboard() {
           </Card>
         </TabsContent>
       </Tabs>
-      </div>
-    </>
+    </div>
   );
 }
