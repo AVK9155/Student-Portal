@@ -1,10 +1,10 @@
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { GraduationCap, Trophy, Users, BarChart3 } from "lucide-react";
+import { GraduationCap, Trophy, Users, BarChart3, BookOpen } from "lucide-react";
 
 interface NavigationProps {
-  currentView: 'home' | 'student' | 'admin';
-  onViewChange: (view: 'home' | 'student' | 'admin') => void;
+  currentView: 'home' | 'student' | 'admin' | 'docs';
+  onViewChange: (view: 'home' | 'student' | 'admin' | 'docs') => void;
 }
 
 export function Navigation({ currentView, onViewChange }: NavigationProps) {
@@ -54,6 +54,16 @@ export function Navigation({ currentView, onViewChange }: NavigationProps) {
               <Badge variant="secondary" className="ml-1">
                 Demo
               </Badge>
+            </Button>
+            
+            <Button
+              variant={currentView === 'docs' ? 'default' : 'ghost'}
+              size="sm"
+              onClick={() => onViewChange('docs')}
+              className="flex items-center space-x-2"
+            >
+              <BookOpen className="w-4 h-4" />
+              <span>Documentation</span>
             </Button>
           </div>
         </div>

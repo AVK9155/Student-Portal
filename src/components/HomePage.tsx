@@ -36,9 +36,9 @@ export function HomePage({ onViewChange }: HomePageProps) {
                 </Button>
                 <Button 
                   size="lg" 
-                  variant="outline"
+                  variant="secondary"
                   onClick={() => onViewChange('admin')}
-                  className="flex items-center space-x-2 border-primary-foreground/20 text-primary-foreground hover:bg-primary-foreground/10"
+                  className="flex items-center space-x-2"
                 >
                   <BarChart3 className="w-5 h-5" />
                   <span>Admin Panel</span>

@@ -3,11 +3,12 @@ import { Navigation } from "@/components/Navigation";
 import { HomePage } from "@/components/HomePage";
 import { StudentDashboard } from "@/components/StudentDashboard";
 import { AdminDashboard } from "@/components/AdminDashboard";
+import { Documentation } from "@/components/Documentation";
 
 const Index = () => {
-  const [currentView, setCurrentView] = useState<'home' | 'student' | 'admin'>('home');
+  const [currentView, setCurrentView] = useState<'home' | 'student' | 'admin' | 'docs'>('home');
 
-  const handleViewChange = (view: 'home' | 'student' | 'admin') => {
+  const handleViewChange = (view: 'home' | 'student' | 'admin' | 'docs') => {
     setCurrentView(view);
   };
 
@@ -25,6 +26,10 @@ const Index = () => {
       
       {currentView === 'admin' && (
         <AdminDashboard />
+      )}
+      
+      {currentView === 'docs' && (
+        <Documentation />
       )}
     </div>
   );
