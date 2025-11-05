@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -16,61 +16,128 @@ import {
   Download,
   BarChart3,
   Award,
-  Star
+  Star,
+  Trash2
 } from "lucide-react";
+import { supabase } from "@/integrations/supabase/client";
+import { useToast } from "@/hooks/use-toast";
+import { AddAchievementDialog } from "./AddAchievementDialog";
+
+interface Achievement {
+  id: string;
+  student_name: string;
+  student_id: string;
+  achievement_title: string;
+  category: string;
+  level: string;
+  achievement_date: string;
+  description: string | null;
+  added_by: string;
+}
 
 export function AdminDashboard() {
+  const { toast } = useToast();
   const [searchTerm, setSearchTerm] = useState("");
+  const [achievements, setAchievements] = useState<Achievement[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [addDialogOpen, setAddDialogOpen] = useState(false);
 
-  const overviewStats = {
-    totalStudents: 1250,
-    totalAchievements: 4500,
-    thisMonthAchievements: 345,
-    averagePerStudent: 3.6
+  useEffect(() => {
+    fetchAchievements();
+  }, []);
+
+  const fetchAchievements = async () => {
+    try {
+      const { data, error } = await supabase
+        .from("achievements")
+        .select("*")
+        .order("achievement_date", { ascending: false });
+
+      if (error) throw error;
+      setAchievements(data || []);
+    } catch (error) {
+      console.error("Error fetching achievements:", error);
+      toast({
+        title: "Error",
+        description: "Failed to load achievements",
+        variant: "destructive"
+      });
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const recentAchievements = [
-    {
-      id: 1,
-      studentName: "Sarah Johnson",
-      studentId: "ST2024001",
-      achievement: "Science Fair Winner",
-      category: "Academic Competition",
-      level: "Gold",
-      date: "2024-03-15",
-      addedBy: "Prof. Smith"
-    },
-    {
-      id: 2,
-      studentName: "Mike Chen",
-      studentId: "ST2024002",
-      achievement: "Basketball MVP",
-      category: "Sports",
-      level: "Gold",
-      date: "2024-03-12",
-      addedBy: "Coach Wilson"
-    },
-    {
-      id: 3,
-      studentName: "Emma Davis",
-      studentId: "ST2024003",
-      achievement: "Volunteer of the Month",
-      category: "Community Service",
-      level: "Silver",
-      date: "2024-03-10",
-      addedBy: "Ms. Rodriguez"
-    },
-    {
-      id: 4,
-      studentName: "Alex Thompson",
-      studentId: "ST2024004",
-      achievement: "Debate Team Captain",
-      category: "Leadership",
-      level: "Leadership",
-      date: "2024-03-08",
-      addedBy: "Mr. Brown"
+  const handleDeleteAchievement = async (id: string) => {
+    try {
+      const { error } = await supabase
+        .from("achievements")
+        .delete()
+        .eq("id", id);
+
+      if (error) throw error;
+
+      toast({
+        title: "Success",
+        description: "Achievement deleted successfully"
+      });
+      fetchAchievements();
+    } catch (error) {
+      console.error("Error deleting achievement:", error);
+      toast({
+        title: "Error",
+        description: "Failed to delete achievement",
+        variant: "destructive"
+      });
     }
-  ];
+  };
+
+  const handleExportReport = () => {
+    const csvContent = [
+      ["Student Name", "Student ID", "Achievement", "Category", "Level", "Date", "Added By"],
+      ...achievements.map(a => [
+        a.student_name,
+        a.student_id,
+        a.achievement_title,
+        a.category,
+        a.level,
+        new Date(a.achievement_date).toLocaleDateString(),
+        a.added_by
+      ])
+    ].map(row => row.join(",")).join("\n");
+
+    const blob = new Blob([csvContent], { type: "text/csv" });
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `achievements-report-${new Date().toISOString().split("T")[0]}.csv`;
+    a.click();
+    window.URL.revokeObjectURL(url);
+
+    toast({
+      title: "Success",
+      description: "Report exported successfully"
+    });
+  };
+
+  const uniqueStudents = new Set(achievements.map(a => a.student_id)).size;
+  const thisMonth = new Date();
+  thisMonth.setDate(1);
+  const thisMonthCount = achievements.filter(a => 
+    new Date(a.achievement_date) >= thisMonth
+  ).length;
+
+  const overviewStats = {
+    totalStudents: uniqueStudents,
+    totalAchievements: achievements.length,
+    thisMonthAchievements: thisMonthCount,
+    averagePerStudent: uniqueStudents > 0 ? (achievements.length / uniqueStudents).toFixed(1) : "0"
+  };
+
+  const filteredAchievements = achievements.filter(a =>
+    a.student_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    a.achievement_title.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    a.student_id.toLowerCase().includes(searchTerm.toLowerCase())
+  );
 
   const topPerformers = [
     { name: "Sarah Johnson", id: "ST2024001", achievements: 15, points: 450 },
@@ -81,33 +148,50 @@ export function AdminDashboard() {
   ];
 
   const getLevelColor = (level: string) => {
-    switch (level) {
-      case 'Gold': return 'bg-gold text-gold-foreground';
-      case 'Silver': return 'bg-muted text-muted-foreground';
-      case 'Leadership': return 'bg-primary text-primary-foreground';
-      default: return 'bg-secondary text-secondary-foreground';
+    switch (level.toLowerCase()) {
+      case 'international': return 'bg-gold text-gold-foreground';
+      case 'national': return 'bg-warning text-warning-foreground';
+      case 'state': return 'bg-success text-success-foreground';
+      case 'district': return 'bg-accent text-accent-foreground';
+      case 'school': return 'bg-secondary text-secondary-foreground';
+      default: return 'bg-muted text-muted-foreground';
     }
   };
 
   return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-      {/* Header */}
-      <div className="flex justify-between items-center mb-8">
-        <div>
-          <h1 className="text-3xl font-bold text-foreground mb-2">Admin Dashboard</h1>
-          <p className="text-muted-foreground">Manage student achievements and track performance</p>
+    <>
+      <AddAchievementDialog 
+        open={addDialogOpen} 
+        onOpenChange={setAddDialogOpen}
+        onSuccess={fetchAchievements}
+      />
+      
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        {/* Header */}
+        <div className="flex justify-between items-center mb-8">
+          <div>
+            <h1 className="text-3xl font-bold text-foreground mb-2">Admin Dashboard</h1>
+            <p className="text-muted-foreground">Manage student achievements and track performance</p>
+          </div>
+          <div className="flex space-x-3">
+            <Button 
+              className="flex items-center space-x-2"
+              onClick={() => setAddDialogOpen(true)}
+            >
+              <Plus className="w-4 h-4" />
+              <span>Add Achievement</span>
+            </Button>
+            <Button 
+              variant="outline" 
+              className="flex items-center space-x-2"
+              onClick={handleExportReport}
+              disabled={achievements.length === 0}
+            >
+              <Download className="w-4 h-4" />
+              <span>Export Report</span>
+            </Button>
+          </div>
         </div>
-        <div className="flex space-x-3">
-          <Button className="flex items-center space-x-2">
-            <Plus className="w-4 h-4" />
-            <span>Add Achievement</span>
-          </Button>
-          <Button variant="outline" className="flex items-center space-x-2">
-            <Download className="w-4 h-4" />
-            <span>Export Report</span>
-          </Button>
-        </div>
-      </div>
 
       {/* Overview Stats */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
@@ -159,7 +243,7 @@ export function AdminDashboard() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-accent">{overviewStats.averagePerStudent}</div>
-            <p className="text-xs text-success mt-1">+0.3 from last semester</p>
+            <p className="text-xs text-muted-foreground mt-1">Per student average</p>
           </CardContent>
         </Card>
       </div>
@@ -198,45 +282,67 @@ export function AdminDashboard() {
               </div>
             </CardHeader>
             <CardContent>
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Student</TableHead>
-                    <TableHead>Achievement</TableHead>
-                    <TableHead>Category</TableHead>
-                    <TableHead>Level</TableHead>
-                    <TableHead>Date</TableHead>
-                    <TableHead>Added By</TableHead>
-                    <TableHead>Actions</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {recentAchievements.map((achievement) => (
-                    <TableRow key={achievement.id}>
-                      <TableCell>
-                        <div>
-                          <div className="font-medium">{achievement.studentName}</div>
-                          <div className="text-sm text-muted-foreground">{achievement.studentId}</div>
-                        </div>
-                      </TableCell>
-                      <TableCell className="font-medium">{achievement.achievement}</TableCell>
-                      <TableCell>
-                        <Badge variant="secondary">{achievement.category}</Badge>
-                      </TableCell>
-                      <TableCell>
-                        <Badge className={getLevelColor(achievement.level)}>
-                          {achievement.level}
-                        </Badge>
-                      </TableCell>
-                      <TableCell>{new Date(achievement.date).toLocaleDateString()}</TableCell>
-                      <TableCell className="text-muted-foreground">{achievement.addedBy}</TableCell>
-                      <TableCell>
-                        <Button variant="ghost" size="sm">Edit</Button>
-                      </TableCell>
+              {loading ? (
+                <div className="text-center py-12 text-muted-foreground">Loading achievements...</div>
+              ) : filteredAchievements.length === 0 ? (
+                <div className="text-center py-12 text-muted-foreground">
+                  <Trophy className="w-12 h-12 mx-auto mb-4 opacity-50" />
+                  <p>No achievements found</p>
+                  <Button 
+                    variant="outline" 
+                    className="mt-4"
+                    onClick={() => setAddDialogOpen(true)}
+                  >
+                    Add First Achievement
+                  </Button>
+                </div>
+              ) : (
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Student</TableHead>
+                      <TableHead>Achievement</TableHead>
+                      <TableHead>Category</TableHead>
+                      <TableHead>Level</TableHead>
+                      <TableHead>Date</TableHead>
+                      <TableHead>Added By</TableHead>
+                      <TableHead>Actions</TableHead>
                     </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
+                  </TableHeader>
+                  <TableBody>
+                    {filteredAchievements.map((achievement) => (
+                      <TableRow key={achievement.id}>
+                        <TableCell>
+                          <div>
+                            <div className="font-medium">{achievement.student_name}</div>
+                            <div className="text-sm text-muted-foreground">{achievement.student_id}</div>
+                          </div>
+                        </TableCell>
+                        <TableCell className="font-medium">{achievement.achievement_title}</TableCell>
+                        <TableCell>
+                          <Badge variant="secondary">{achievement.category}</Badge>
+                        </TableCell>
+                        <TableCell>
+                          <Badge className={getLevelColor(achievement.level)}>
+                            {achievement.level}
+                          </Badge>
+                        </TableCell>
+                        <TableCell>{new Date(achievement.achievement_date).toLocaleDateString()}</TableCell>
+                        <TableCell className="text-muted-foreground">{achievement.added_by}</TableCell>
+                        <TableCell>
+                          <Button 
+                            variant="ghost" 
+                            size="sm"
+                            onClick={() => handleDeleteAchievement(achievement.id)}
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </Button>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              )}
             </CardContent>
           </Card>
         </TabsContent>
@@ -334,6 +440,7 @@ export function AdminDashboard() {
           </Card>
         </TabsContent>
       </Tabs>
-    </div>
+      </div>
+    </>
   );
 }

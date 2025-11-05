@@ -1,0 +1,221 @@
+import { useState } from "react";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Textarea } from "@/components/ui/textarea";
+import { supabase } from "@/integrations/supabase/client";
+import { useToast } from "@/hooks/use-toast";
+
+interface AddAchievementDialogProps {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  onSuccess: () => void;
+}
+
+export function AddAchievementDialog({ open, onOpenChange, onSuccess }: AddAchievementDialogProps) {
+  const { toast } = useToast();
+  const [loading, setLoading] = useState(false);
+  const [formData, setFormData] = useState({
+    studentName: "",
+    studentId: "",
+    achievementTitle: "",
+    category: "",
+    level: "",
+    achievementDate: "",
+    description: "",
+    addedBy: ""
+  });
+
+  const categories = [
+    "Academic Competition",
+    "Sports",
+    "Community Service",
+    "Leadership",
+    "Arts & Performance",
+    "STEM & Technology"
+  ];
+
+  const levels = ["School", "District", "State", "National", "International"];
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setLoading(true);
+
+    try {
+      const { error } = await supabase.from("achievements").insert({
+        student_name: formData.studentName,
+        student_id: formData.studentId,
+        achievement_title: formData.achievementTitle,
+        category: formData.category,
+        level: formData.level,
+        achievement_date: formData.achievementDate,
+        description: formData.description,
+        added_by: formData.addedBy
+      });
+
+      if (error) throw error;
+
+      toast({
+        title: "Success",
+        description: "Achievement added successfully"
+      });
+
+      setFormData({
+        studentName: "",
+        studentId: "",
+        achievementTitle: "",
+        category: "",
+        level: "",
+        achievementDate: "",
+        description: "",
+        addedBy: ""
+      });
+      
+      onSuccess();
+      onOpenChange(false);
+    } catch (error) {
+      console.error("Error adding achievement:", error);
+      toast({
+        title: "Error",
+        description: "Failed to add achievement",
+        variant: "destructive"
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+        <DialogHeader>
+          <DialogTitle>Add New Achievement</DialogTitle>
+          <DialogDescription>
+            Record a new student achievement in the system
+          </DialogDescription>
+        </DialogHeader>
+        
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label htmlFor="studentName">Student Name *</Label>
+              <Input
+                id="studentName"
+                required
+                value={formData.studentName}
+                onChange={(e) => setFormData({ ...formData, studentName: e.target.value })}
+                placeholder="e.g., Sarah Johnson"
+              />
+            </div>
+            
+            <div className="space-y-2">
+              <Label htmlFor="studentId">Student ID *</Label>
+              <Input
+                id="studentId"
+                required
+                value={formData.studentId}
+                onChange={(e) => setFormData({ ...formData, studentId: e.target.value })}
+                placeholder="e.g., ST2024001"
+              />
+            </div>
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="achievementTitle">Achievement Title *</Label>
+            <Input
+              id="achievementTitle"
+              required
+              value={formData.achievementTitle}
+              onChange={(e) => setFormData({ ...formData, achievementTitle: e.target.value })}
+              placeholder="e.g., Science Fair Winner"
+            />
+          </div>
+
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label htmlFor="category">Category *</Label>
+              <Select
+                required
+                value={formData.category}
+                onValueChange={(value) => setFormData({ ...formData, category: value })}
+              >
+                <SelectTrigger id="category">
+                  <SelectValue placeholder="Select category" />
+                </SelectTrigger>
+                <SelectContent>
+                  {categories.map((cat) => (
+                    <SelectItem key={cat} value={cat}>{cat}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            
+            <div className="space-y-2">
+              <Label htmlFor="level">Level *</Label>
+              <Select
+                required
+                value={formData.level}
+                onValueChange={(value) => setFormData({ ...formData, level: value })}
+              >
+                <SelectTrigger id="level">
+                  <SelectValue placeholder="Select level" />
+                </SelectTrigger>
+                <SelectContent>
+                  {levels.map((lvl) => (
+                    <SelectItem key={lvl} value={lvl}>{lvl}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label htmlFor="achievementDate">Achievement Date *</Label>
+              <Input
+                id="achievementDate"
+                type="date"
+                required
+                value={formData.achievementDate}
+                onChange={(e) => setFormData({ ...formData, achievementDate: e.target.value })}
+              />
+            </div>
+            
+            <div className="space-y-2">
+              <Label htmlFor="addedBy">Added By *</Label>
+              <Input
+                id="addedBy"
+                required
+                value={formData.addedBy}
+                onChange={(e) => setFormData({ ...formData, addedBy: e.target.value })}
+                placeholder="e.g., Prof. Smith"
+              />
+            </div>
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="description">Description</Label>
+            <Textarea
+              id="description"
+              value={formData.description}
+              onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+              placeholder="Optional description or additional details"
+              rows={3}
+            />
+          </div>
+
+          <DialogFooter>
+            <Button type="button" variant="outline" onClick={() => onOpenChange(false)} disabled={loading}>
+              Cancel
+            </Button>
+            <Button type="submit" disabled={loading}>
+              {loading ? "Adding..." : "Add Achievement"}
+            </Button>
+          </DialogFooter>
+        </form>
+      </DialogContent>
+    </Dialog>
+  );
+}

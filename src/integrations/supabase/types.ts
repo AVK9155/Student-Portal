@@ -14,7 +14,48 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      achievements: {
+        Row: {
+          achievement_date: string
+          achievement_title: string
+          added_by: string
+          category: string
+          created_at: string
+          description: string | null
+          id: string
+          level: string
+          student_id: string
+          student_name: string
+          updated_at: string
+        }
+        Insert: {
+          achievement_date: string
+          achievement_title: string
+          added_by: string
+          category: string
+          created_at?: string
+          description?: string | null
+          id?: string
+          level: string
+          student_id: string
+          student_name: string
+          updated_at?: string
+        }
+        Update: {
+          achievement_date?: string
+          achievement_title?: string
+          added_by?: string
+          category?: string
+          created_at?: string
+          description?: string | null
+          id?: string
+          level?: string
+          student_id?: string
+          student_name?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
