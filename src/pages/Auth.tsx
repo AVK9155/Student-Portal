@@ -96,12 +96,23 @@ const Auth = () => {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-primary/10 via-background to-secondary/10 p-4">
-      <Card className="w-full max-w-md">
-        <CardHeader className="space-y-1">
-          <CardTitle className="text-2xl font-bold text-center">Welcome</CardTitle>
-          <CardDescription className="text-center">
-            {isLogin ? 'Sign in to your account' : 'Create a new account'}
+    <div className="min-h-screen flex items-center justify-center gradient-hero p-4 relative overflow-hidden">
+      {/* Decorative elements */}
+      <div className="absolute inset-0 opacity-20">
+        <div className="absolute top-20 left-20 w-72 h-72 bg-primary rounded-full mix-blend-multiply filter blur-3xl animate-pulse"></div>
+        <div className="absolute bottom-20 right-20 w-72 h-72 bg-accent rounded-full mix-blend-multiply filter blur-3xl animate-pulse delay-1000"></div>
+      </div>
+
+      <Card className="w-full max-w-md shadow-elegant relative z-10 backdrop-blur-sm bg-card/95">
+        <CardHeader className="space-y-3 text-center">
+          <div className="mx-auto w-16 h-16 gradient-primary rounded-2xl flex items-center justify-center mb-2">
+            <GraduationCap className="w-10 h-10 text-primary-foreground" />
+          </div>
+          <CardTitle className="text-3xl font-bold bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">
+            StudentAchieve
+          </CardTitle>
+          <CardDescription className="text-center text-base">
+            {isLogin ? 'Welcome back! Sign in to continue' : 'Join us to track your achievements'}
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -134,32 +145,39 @@ const Auth = () => {
                     required
                   />
                 </div>
-                <Button type="submit" className="w-full" disabled={loading}>
+                <Button type="submit" className="w-full gradient-primary text-primary-foreground hover:opacity-90 transition-opacity shadow-elegant" disabled={loading}>
                   {loading ? 'Signing in...' : 'Sign In'}
                 </Button>
               </form>
             </TabsContent>
 
             <TabsContent value="signup" className="space-y-4">
-              <div className="grid grid-cols-2 gap-4 mb-4">
-                <Button
-                  type="button"
-                  variant={role === 'student' ? 'default' : 'outline'}
-                  onClick={() => setRole('student')}
-                  className="flex items-center gap-2"
-                >
-                  <GraduationCap className="h-4 w-4" />
-                  Student
-                </Button>
-                <Button
-                  type="button"
-                  variant={role === 'admin' ? 'default' : 'outline'}
-                  onClick={() => setRole('admin')}
-                  className="flex items-center gap-2"
-                >
-                  <Shield className="h-4 w-4" />
-                  Admin
-                </Button>
+              <div className="space-y-2 mb-4">
+                <Label className="text-sm font-medium">Select Role</Label>
+                <div className="grid grid-cols-2 gap-3">
+                  <Button
+                    type="button"
+                    variant={role === 'student' ? 'default' : 'outline'}
+                    onClick={() => setRole('student')}
+                    className={`flex flex-col items-center gap-2 h-auto py-4 transition-all ${
+                      role === 'student' ? 'ring-2 ring-primary shadow-elegant' : ''
+                    }`}
+                  >
+                    <GraduationCap className="h-6 w-6" />
+                    <span className="font-semibold">Student</span>
+                  </Button>
+                  <Button
+                    type="button"
+                    variant={role === 'admin' ? 'default' : 'outline'}
+                    onClick={() => setRole('admin')}
+                    className={`flex flex-col items-center gap-2 h-auto py-4 transition-all ${
+                      role === 'admin' ? 'ring-2 ring-accent shadow-elegant' : ''
+                    }`}
+                  >
+                    <Shield className="h-6 w-6" />
+                    <span className="font-semibold">Admin</span>
+                  </Button>
+                </div>
               </div>
 
               <form onSubmit={handleSubmit} className="space-y-4">
@@ -196,7 +214,13 @@ const Auth = () => {
                     minLength={6}
                   />
                 </div>
-                <Button type="submit" className="w-full" disabled={loading}>
+                <Button 
+                  type="submit" 
+                  className={`w-full ${
+                    role === 'student' ? 'gradient-primary' : 'bg-accent hover:bg-accent/90'
+                  } text-primary-foreground hover:opacity-90 transition-opacity shadow-elegant`}
+                  disabled={loading}
+                >
                   {loading ? 'Creating account...' : `Sign Up as ${role === 'student' ? 'Student' : 'Admin'}`}
                 </Button>
               </form>
