@@ -1,13 +1,28 @@
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { GraduationCap, Trophy, Users, BarChart3, BookOpen } from "lucide-react";
+import { GraduationCap, Trophy, Users, BarChart3, BookOpen, LogOut } from "lucide-react";
+import { supabase } from "@/integrations/supabase/client";
+import { useToast } from "@/hooks/use-toast";
 
 interface NavigationProps {
   currentView: 'home' | 'student' | 'admin' | 'docs';
   onViewChange: (view: 'home' | 'student' | 'admin' | 'docs') => void;
+  userRole: 'student' | 'admin' | null;
 }
 
-export function Navigation({ currentView, onViewChange }: NavigationProps) {
+export function Navigation({ currentView, onViewChange, userRole }: NavigationProps) {
+  const { toast } = useToast();
+
+  const handleLogout = async () => {
+    const { error } = await supabase.auth.signOut();
+    if (error) {
+      toast({
+        title: "Error",
+        description: error.message,
+        variant: "destructive",
+      });
+    }
+  };
   return (
     <nav className="bg-card border-b shadow-card">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -43,18 +58,17 @@ export function Navigation({ currentView, onViewChange }: NavigationProps) {
               <span>Student View</span>
             </Button>
             
-            <Button
-              variant={currentView === 'admin' ? 'default' : 'ghost'}
-              size="sm"
-              onClick={() => onViewChange('admin')}
-              className="flex items-center space-x-2"
-            >
-              <BarChart3 className="w-4 h-4" />
-              <span>Admin Panel</span>
-              <Badge variant="secondary" className="ml-1">
-                Demo
-              </Badge>
-            </Button>
+            {userRole === 'admin' && (
+              <Button
+                variant={currentView === 'admin' ? 'default' : 'ghost'}
+                size="sm"
+                onClick={() => onViewChange('admin')}
+                className="flex items-center space-x-2"
+              >
+                <BarChart3 className="w-4 h-4" />
+                <span>Admin Panel</span>
+              </Button>
+            )}
             
             <Button
               variant={currentView === 'docs' ? 'default' : 'ghost'}
@@ -64,6 +78,16 @@ export function Navigation({ currentView, onViewChange }: NavigationProps) {
             >
               <BookOpen className="w-4 h-4" />
               <span>Documentation</span>
+            </Button>
+
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={handleLogout}
+              className="flex items-center space-x-2 ml-2"
+            >
+              <LogOut className="w-4 h-4" />
+              <span>Logout</span>
             </Button>
           </div>
         </div>
