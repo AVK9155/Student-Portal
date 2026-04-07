@@ -5,9 +5,10 @@ import { Trophy, Users, BarChart3, Award, Star, TrendingUp, Shield, Zap } from "
 
 interface HomePageProps {
   onViewChange: (view: 'student' | 'admin') => void;
+  userRole: 'student' | 'admin' | null;
 }
 
-export function HomePage({ onViewChange }: HomePageProps) {
+export function HomePage({ onViewChange, userRole }: HomePageProps) {
   return (
     <div className="min-h-screen bg-background">
       {/* Hero Section */}
@@ -34,15 +35,17 @@ export function HomePage({ onViewChange }: HomePageProps) {
                   <Trophy className="w-5 h-5" />
                   <span>Student Dashboard</span>
                 </Button>
-                <Button 
-                  size="lg" 
-                  variant="secondary"
-                  onClick={() => onViewChange('admin')}
-                  className="flex items-center space-x-2"
-                >
-                  <BarChart3 className="w-5 h-5" />
-                  <span>Admin Panel</span>
-                </Button>
+                {userRole === 'admin' && (
+                  <Button 
+                    size="lg" 
+                    variant="secondary"
+                    onClick={() => onViewChange('admin')}
+                    className="flex items-center space-x-2"
+                  >
+                    <BarChart3 className="w-5 h-5" />
+                    <span>Admin Panel</span>
+                  </Button>
+                )}
               </div>
             </div>
           </div>
@@ -179,15 +182,17 @@ export function HomePage({ onViewChange }: HomePageProps) {
               <Trophy className="w-5 h-5" />
               <span>View Student Dashboard</span>
             </Button>
-            <Button 
-              size="lg" 
-              variant="outline"
-              onClick={() => onViewChange('admin')}
-              className="flex items-center space-x-2"
-            >
-              <Shield className="w-5 h-5" />
-              <span>Explore Admin Features</span>
-            </Button>
+            {userRole === 'admin' && (
+              <Button 
+                size="lg" 
+                variant="outline"
+                onClick={() => onViewChange('admin')}
+                className="flex items-center space-x-2"
+              >
+                <Shield className="w-5 h-5" />
+                <span>Explore Admin Features</span>
+              </Button>
+            )}
           </div>
         </div>
       </section>

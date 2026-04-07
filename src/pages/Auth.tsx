@@ -7,14 +7,39 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
-import { GraduationCap, Shield } from "lucide-react";
+import { GraduationCap } from "lucide-react";
+
+const getAuthErrorMessage = (message: string | undefined, isLogin: boolean) => {
+  if (!message) {
+    return isLogin
+      ? "Unable to sign in. Please check your details and try again."
+      : "Unable to create your account. Please try again.";
+  }
+
+  const normalizedMessage = message.toLowerCase();
+
+  if (normalizedMessage.includes("invalid login credentials")) {
+    return "Invalid email or password.";
+  }
+
+  if (normalizedMessage.includes("email not confirmed")) {
+    return "Please confirm your email before signing in.";
+  }
+
+  if (normalizedMessage.includes("user already registered")) {
+    return "An account with this email already exists.";
+  }
+
+  return isLogin
+    ? "Unable to sign in. Please check your details and try again."
+    : "Unable to create your account. Please try again.";
+};
 
 const Auth = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
   const [loading, setLoading] = useState(false);
   const [isLogin, setIsLogin] = useState(true);
-  const [role, setRole] = useState<'student' | 'admin'>('student');
   const [formData, setFormData] = useState({
     email: '',
     password: '',
@@ -73,9 +98,11 @@ const Auth = () => {
           // Insert user role
           const { error: roleError } = await supabase
             .from('user_roles')
-            .insert({ user_id: data.user.id, role });
+            .insert({ user_id: data.user.id, role: 'student' });
 
-          if (roleError) throw roleError;
+          if (roleError) {
+            throw new Error("Account setup could not be completed.");
+          }
 
           toast({
             title: "Success",
@@ -87,7 +114,7 @@ const Auth = () => {
     } catch (error: any) {
       toast({
         title: "Error",
-        description: error.message,
+        description: getAuthErrorMessage(error?.message, isLogin),
         variant: "destructive",
       });
     } finally {
@@ -152,32 +179,8 @@ const Auth = () => {
             </TabsContent>
 
             <TabsContent value="signup" className="space-y-4">
-              <div className="space-y-2 mb-4">
-                <Label className="text-sm font-medium">Select Role</Label>
-                <div className="grid grid-cols-2 gap-3">
-                  <Button
-                    type="button"
-                    variant={role === 'student' ? 'default' : 'outline'}
-                    onClick={() => setRole('student')}
-                    className={`flex flex-col items-center gap-2 h-auto py-4 transition-all ${
-                      role === 'student' ? 'ring-2 ring-primary shadow-elegant' : ''
-                    }`}
-                  >
-                    <GraduationCap className="h-6 w-6" />
-                    <span className="font-semibold">Student</span>
-                  </Button>
-                  <Button
-                    type="button"
-                    variant={role === 'admin' ? 'default' : 'outline'}
-                    onClick={() => setRole('admin')}
-                    className={`flex flex-col items-center gap-2 h-auto py-4 transition-all ${
-                      role === 'admin' ? 'ring-2 ring-accent shadow-elegant' : ''
-                    }`}
-                  >
-                    <Shield className="h-6 w-6" />
-                    <span className="font-semibold">Admin</span>
-                  </Button>
-                </div>
+              <div className="rounded-lg border border-border bg-muted/40 p-4 text-sm text-muted-foreground">
+                New accounts are created as student accounts. Admin access must be granted separately through a trusted admin workflow.
               </div>
 
               <form onSubmit={handleSubmit} className="space-y-4">
@@ -216,12 +219,10 @@ const Auth = () => {
                 </div>
                 <Button 
                   type="submit" 
-                  className={`w-full ${
-                    role === 'student' ? 'gradient-primary' : 'bg-accent hover:bg-accent/90'
-                  } text-primary-foreground hover:opacity-90 transition-opacity shadow-elegant`}
+                  className="w-full gradient-primary text-primary-foreground hover:opacity-90 transition-opacity shadow-elegant"
                   disabled={loading}
                 >
-                  {loading ? 'Creating account...' : `Sign Up as ${role === 'student' ? 'Student' : 'Admin'}`}
+                  {loading ? 'Creating account...' : 'Sign Up'}
                 </Button>
               </form>
             </TabsContent>
