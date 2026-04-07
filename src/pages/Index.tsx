@@ -67,6 +67,11 @@ const Index = () => {
   }, [navigate]);
 
   const handleViewChange = (view: 'home' | 'student' | 'admin' | 'docs') => {
+    if (view === 'admin' && userRole !== 'admin') {
+      setCurrentView('home');
+      return;
+    }
+
     setCurrentView(view);
   };
 
@@ -86,14 +91,14 @@ const Index = () => {
       <Navigation currentView={currentView} onViewChange={handleViewChange} userRole={userRole} />
       
       {currentView === 'home' && (
-        <HomePage onViewChange={handleViewChange} />
+        <HomePage onViewChange={handleViewChange} userRole={userRole} />
       )}
       
       {currentView === 'student' && (
         <StudentDashboard />
       )}
       
-      {currentView === 'admin' && (
+      {currentView === 'admin' && userRole === 'admin' && (
         <AdminDashboard />
       )}
       
